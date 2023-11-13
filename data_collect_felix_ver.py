@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 
 def get_alphafold_db_pdb(protein_id: str, out_path: str) -> bool:
 
@@ -20,4 +21,10 @@ def get_alphafold_db_pdb(protein_id: str, out_path: str) -> bool:
         return False
     
 if __name__ == "__main__":
-    get_alphafold_db_pdb("P0DTU3", "proteins/P0DTU3")
+    f = open("DeepTMHMM.partitions.json")
+    data = json.load(f)
+    
+    for keys in data.keys():
+        for protein in data[keys]:
+            get_alphafold_db_pdb(protein['id'], f"proteins/{keys}/{protein['id']}")
+            
