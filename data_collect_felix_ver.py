@@ -26,5 +26,5 @@ if __name__ == "__main__":
     
     for keys in data.keys():
         for protein in data[keys]:
-            get_alphafold_db_pdb(protein['id'], f"proteins/{keys}/{protein['id']}")
+            get_alphafold_db_pdb(protein['id'], f"proteins/{keys}/{protein['id']}.pdb")
             
