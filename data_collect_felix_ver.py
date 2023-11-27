@@ -21,6 +21,7 @@ def get_alphafold_db_pdb(protein_id: str, out_path: str) -> bool:
         return False
     
 if __name__ == "__main__":
+    #os.chdir("C://Users//andre//Documents//DeepLearning Project//")
     f = open("DeepTMHMM.partitions.json")
     data = json.load(f)
     
