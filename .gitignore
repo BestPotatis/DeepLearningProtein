@@ -2,3 +2,5 @@
 /proteins/
 /encoder_proteins/
 data.zip
+linear_classifier.py
+classifier
