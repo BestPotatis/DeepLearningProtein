@@ -4,3 +4,6 @@
 /encoder_proteins_test/
 /.ipynb_checkpoints/
 data.zip
+linear_classifier.py
+classifier
+__pycache__
