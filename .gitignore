@@ -1,5 +1,6 @@
 /data/
 /proteins/
 /encoder_proteins/
+/encoder_proteins_test/
 /.ipynb_checkpoints/
 data.zip
