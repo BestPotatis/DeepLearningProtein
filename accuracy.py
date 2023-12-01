@@ -17,6 +17,13 @@ import numpy as np
 # The following are the label mapping is used in the metrics.
 LABELS: Dict[str,int] = {'I': 0, 'O':1, 'P': 2, 'S': 3, 'M':4, 'B': 5}
 
+def update_nested_dict(d, keys, value):
+    for key in keys[:-1]:
+        if key not in d:
+            d[key] = {}
+        d = d[key]
+    d[keys[-1]] = value
+
 def type_from_labels(label):
     """
     Function that determines the protein type from labels
@@ -166,10 +173,9 @@ def calculate_acc(correct, total):
     return correct / total
 
 def test_predictions(model, testloader, loss_function, cv, experiment_file_path):
+    # either loads an empty dict or the dict of the previous fold 
     experiment_json = json.loads(open(experiment_file_path, 'r').read())
-    #experiment_json = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)), experiment_json)
-    experiment_json = defaultdict(lambda: defaultdict(dict, experiment_json), experiment_json)
-    
+
     confusion_matrix = torch.zeros((6, 6), dtype=torch.int64)
     protein_names = []
     protein_label_actual = []
@@ -263,10 +269,7 @@ def test_predictions(model, testloader, loss_function, cv, experiment_file_path)
     glob_type_acc = float(calculate_acc(confusion_matrix[3][3] + confusion_matrix[3][5], confusion_matrix[3].sum()).detach())
     beta_type_acc = float(calculate_acc(confusion_matrix[4][4] + confusion_matrix[4][5], confusion_matrix[4].sum()).detach())
     
-    # experiment_json = defaultdict(lambda: defaultdict(dict))
-    
-    experiment_json['test'][cv]['confusion_matrix'] = confusion_matrix.tolist()
-    #experiment_json['test'] = dict(experiment_json['test'])
+    update_nested_dict(experiment_json, ['test', cv, 'confusion_matrix'], confusion_matrix.tolist())
     
     experiment_json['test'][cv].update({
         'type': type_accuracy
@@ -312,6 +315,6 @@ def test_predictions(model, testloader, loss_function, cv, experiment_file_path)
         'loss': np.mean(test_batch_loss)
     })
     
-    open(experiment_file_path, 'w').write(json.dumps(dict(experiment_json)))
+    open(experiment_file_path, 'w').write(json.dumps(dict(experiment_json), indent = 1))
     
     return (protein_names, protein_label_actual, protein_label_prediction, np.mean(test_batch_loss)) 
