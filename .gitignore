@@ -1,7 +1,9 @@
 /data/
 /proteins/
 /encoder_proteins/
+/encoder_proteins_test/
+/.ipynb_checkpoints/
 data.zip
 linear_classifier.py
 classifier
-.ipynb_checkpoints
+__pycache__
