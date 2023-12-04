@@ -11,7 +11,7 @@ import numpy as np
 import json
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 from collections import defaultdict
-
+from pytorchtools import EarlyStopping
 from classifier_rnn import RNN
 from accuracy import test_predictions
 
@@ -67,10 +67,11 @@ def collate_fn(batch):
     return {'data': padded_data, 'labels': padded_labels, "lengths": lengths} 
 
 
-def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, experiment_file_path, device, num_epochs = 50):
+def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, experiment_file_path, device, num_epochs = 50, patience = 15):
 
     model.train()
     
+    early_stopping = EarlyStopping(patience=patience, verbose=False)
     train_loss = []
     valid_loss = []
     
@@ -108,11 +109,20 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
         train_loss.append(train_loss_epoch)
         valid_loss.append(valid_loss_epoch)
         
-        # if epoch % 10 == 0:
+        # checking val loss for early stopping
+        early_stopping(valid_loss_epoch, model)
+        
+        if early_stopping.early_stop:
+            # print("Early stopping, best loss: ", train_loss[-16], -early_stopping.best_score)
+            
+            return train_loss[-16], -early_stopping.best_score
+        
+        # if epoch % 1 == 0:
         #     print("training loss: ", train_loss[-1], \
-        #         "\t validation loss: ", valid_loss[-1])
+        #         "\t validation loss: ", valid_loss[-1],
+        #         "\t early stop score:", -early_stopping.best_score)
     
-    return train_loss, valid_loss
+    return train_loss[-1], valid_loss[-1]
 
 
 if __name__ == "__main__":
@@ -129,6 +139,7 @@ if __name__ == "__main__":
     loss_function = nn.CrossEntropyLoss()
     lr = 1e-3
     tuning = [64, 128, 256, 512]
+    encoder_path = "encoder_proteins"
 
     experiment_file_list = []
     for i in tuning:
@@ -151,7 +162,7 @@ if __name__ == "__main__":
         kfolds.append((train_idx, val_idx, test_idx))
 
     # make on big concatenated dataset of all splits
-    data_cvs = np.squeeze([CustomDataset(os.path.join("encoder_proteins", folder), 'train') for folder in ['cv0', 'cv1', 'cv2', 'cv3' , 'cv4']])
+    data_cvs = np.squeeze([CustomDataset(os.path.join(encoder_path, folder), 'train') for folder in ['cv0', 'cv1', 'cv2', 'cv3' , 'cv4']])
 
     gen_train_loss = np.zeros((len(kfolds), num_epochs))
     gen_train_acc = np.zeros((len(kfolds), num_epochs))
@@ -175,8 +186,8 @@ if __name__ == "__main__":
         
         param_models = []
         
-        train_loss_param = np.zeros((len(tuning), num_epochs))
-        val_loss_param = np.zeros((len(tuning), num_epochs))
+        train_loss_param = np.zeros((len(tuning)))
+        val_loss_param = np.zeros((len(tuning)))
         
         # hyperparameter tune
         for idx, param in enumerate(tuning):
@@ -204,7 +215,7 @@ if __name__ == "__main__":
             val_loss_param[idx] = valid_loss
         
         # test for the best model
-        best_param_idx = val_loss_param[:, -1].argmin()
+        best_param_idx = val_loss_param.argmin()
         best_model = param_models[best_param_idx]
         experiment_file_path = experiment_file_list[best_param_idx]
         
