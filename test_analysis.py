@@ -10,7 +10,8 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import json
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
-from sklearn.preprocessing import LabelBinarizer
+from collections import defaultdict
+
 from classifier_rnn import RNN
 from accuracy import test_predictions
 
@@ -22,8 +23,6 @@ class CustomDataset(Dataset):
         self.data = self.load_data()
         
         self.label_encoding = {'I': 0, 'O': 1, 'P': 2, 'S': 3, 'M': 4, 'B': 5}
-        self.one_hot = LabelBinarizer()
-        self.one_hot.fit(list(self.label_encoding.values()))
 
     def load_data(self):
         file_list = [f for f in os.listdir(self.folder_path) if f.endswith('.npy')]
@@ -45,9 +44,7 @@ class CustomDataset(Dataset):
         labels_str = sample['labels']
 
         labels_list = [self.label_encoding[label] for label in labels_str]
-        labels_list = self.one_hot.transform(labels_list)
-        
-        labels_tensor = torch.tensor(labels_list, dtype=torch.float)
+        labels_tensor = torch.tensor(labels_list, dtype=torch.long)
 
         return {'data': inputs, 'labels': labels_tensor}
 
@@ -70,7 +67,8 @@ def collate_fn(batch):
     return {'data': padded_data, 'labels': padded_labels, "lengths": lengths} 
 
 
-def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, experiment_file_path, num_epochs = 50):
+def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, experiment_file_path, device, num_epochs = 50):
+
     model.train()
     
     train_loss = []
@@ -78,8 +76,9 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
     
     for epoch in range(num_epochs):
         for _, batch in enumerate(trainloader):
-            inputs, labels, lengths = batch['data'], batch['labels'], batch['lengths']
-
+            inputs, labels, lengths = batch['data'], batch['labels'], torch.tensor(batch['lengths'])
+            inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)
+            
             # receive output from rnn
             output = model(inputs)  
             
@@ -90,7 +89,7 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
                 batch_labels = labels[l][:lengths[l]]
                 
                 # compute cross-entropy loss
-                loss += loss_function(batch_output, batch_labels)
+                loss += loss_function(batch_output, batch_labels) / trainloader.batch_size
                 
             # gradient update
             optimizer.zero_grad()
@@ -98,10 +97,12 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
             optimizer.step()  
         
         train_loss_epoch = test_predictions(model = model, loader = trainloader, loss_function = loss_function,
-                         cv = str(fold), experiment_file_path = experiment_file_path, condition = "train", epoch = str(epoch))   
+                         cv = str(fold), experiment_file_path = experiment_file_path, condition = "train", epoch = str(epoch),
+                         device = device)   
 
         valid_loss_epoch = test_predictions(model = model, loader = valloader, loss_function = loss_function,
-                        cv = str(fold), experiment_file_path = experiment_file_path, condition = "val", epoch = str(epoch))
+                        cv = str(fold), experiment_file_path = experiment_file_path, condition = "val", epoch = str(epoch),
+                        device = device)
         
         # # receive mean loss for this epoch
         train_loss.append(train_loss_epoch)
@@ -115,16 +116,19 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
 
 
 if __name__ == "__main__":
-    #ensure that all tensors are on the GPU
+    # set device to gpu if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     if torch.cuda.is_available():
         torch.set_default_device("cuda:0")
 
-    # config (testing!!)
+    # config
     k_folds = 5
     num_epochs = 2
+    batch_size = 2
     loss_function = nn.CrossEntropyLoss()
     lr = 1e-3
-    tuning = [100, 200, 300, 400]
+    tuning = [64, 128, 256, 512]
 
     experiment_file_list = []
     for i in tuning:
@@ -156,7 +160,7 @@ if __name__ == "__main__":
 
     # k-fold cross validation
     for fold, (train_ids, val_id, test_id) in enumerate(kfolds):    
-        # print(f'FOLD {fold + 1}')
+        # print(f'\nFOLD {fold + 1}')
         # print('--------------------------------')
         
         # concatenates the data from the different cv's
@@ -164,40 +168,40 @@ if __name__ == "__main__":
         
         # define data loaders for train/val/test data in this fold (collate 0 pads for same-length)
         trainloader = DataLoader(
-                            training_data, batch_size=32, shuffle=True, collate_fn=collate_fn)
+                            training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, drop_last = True)
 
-        valloader = DataLoader(data_cvs[val_id], batch_size=32, shuffle=False, collate_fn=collate_fn)
-        testloader = DataLoader(data_cvs[test_id], batch_size=32, shuffle=False, collate_fn=collate_fn)
+        valloader = DataLoader(data_cvs[val_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = True)
+        testloader = DataLoader(data_cvs[test_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = True)
         
         param_models = []
         
         train_loss_param = np.zeros((len(tuning), num_epochs))
-        train_acc_param = np.zeros((len(tuning), num_epochs))
         val_loss_param = np.zeros((len(tuning), num_epochs))
-        val_acc_param = np.zeros((len(tuning), num_epochs))
         
         # hyperparameter tune
         for idx, param in enumerate(tuning):
-            experiment_file_path = experiment_file_list[idx]
+            experiment_file_path = experiment_file_list[idx] 
             
             # print(f'\nHIDDEN_SIZE {param}')
             # print('--------------------------------')
             
             # define models to be analyzed
             model_rnn = RNN(512, param, 6)
+            model_rnn.to(device)
+            
             optimizer = optim.Adam(model_rnn.parameters(), lr = lr)
-
+            
             # train and validate model
             train_loss, valid_loss = train_nn(model = model_rnn, 
                                             trainloader = trainloader, valloader = valloader,
                                             loss_function = loss_function, optimizer = optimizer, 
                                             fold = fold, experiment_file_path = experiment_file_path, 
-                                            num_epochs = num_epochs)
+                                            device = device, num_epochs = num_epochs)
             
             # save models and losses
             param_models.append(model_rnn)   
             train_loss_param[idx] = train_loss
-            val_loss_param[idx] = valid_loss   
+            val_loss_param[idx] = valid_loss
         
         # test for the best model
         best_param_idx = val_loss_param[:, -1].argmin()
@@ -206,9 +210,10 @@ if __name__ == "__main__":
         
         # print(f"\nbest params for fold {fold + 1}: ", tuning[best_param_idx])  
         
-        test_loss = test_predictions(model = best_model, 
-                        loader = testloader, 
-                        loss_function = loss_function, 
-                        cv = str(fold), experiment_file_path = experiment_file_path)
-        
+        test_loss = test_predictions(model = best_model,
+                        loader = testloader,
+                        loss_function = loss_function,
+                        cv = str(fold), experiment_file_path = experiment_file_path,
+                        device = device)
+
         # print(f"test loss for fold {fold + 1}: ", test_loss)
