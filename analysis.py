@@ -151,7 +151,7 @@ if __name__ == "__main__":
         kfolds.append((train_idx, val_idx, test_idx))
 
     # make on big concatenated dataset of all splits
-    data_cvs = np.squeeze([CustomDataset(os.path.join("encoder_proteins_test", folder), 'train') for folder in ['cv0', 'cv1', 'cv2', 'cv3' , 'cv4']])
+    data_cvs = np.squeeze([CustomDataset(os.path.join("encoder_proteins", folder), 'train') for folder in ['cv0', 'cv1', 'cv2', 'cv3' , 'cv4']])
 
     gen_train_loss = np.zeros((len(kfolds), num_epochs))
     gen_train_acc = np.zeros((len(kfolds), num_epochs))
