@@ -12,13 +12,12 @@ class RNN(nn.Module):
 
         # define fully connected layers
         self.linear = nn.Linear(hidden_size, num_classes, bias = False)
-        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         # return output and last hidden state
         x, (h, c) = self.lstm(x)
         
         # fully-connected output layer
-        x = self.softmax(self.linear(x))
+        x = self.linear(x)
         
         return x
