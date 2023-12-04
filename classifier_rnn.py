@@ -5,6 +5,7 @@ class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
         super(RNN, self).__init__()
         
+        self.hidden_size = hidden_size
         # rnn
         self.lstm = nn.LSTM(input_size = input_size, hidden_size = hidden_size, 
                             batch_first = True)
