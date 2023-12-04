@@ -18,11 +18,18 @@ import numpy as np
 LABELS: Dict[str,int] = {'I': 0, 'O':1, 'P': 2, 'S': 3, 'M':4, 'B': 5}
 
 def update_nested_dict(d, keys, value):
-    for key in keys[:-1]:
+    for idx, key in enumerate(keys[:-1]):
         if key not in d:
             d[key] = {}
         d = d[key]
     d[keys[-1]] = value
+
+def custom_encoder(obj):
+    if 'confusion_matrix' in obj:
+        # Use a different indentation for the confusion_matrix
+        return json.dumps(obj, separators=(',', ':'), indent=4)
+    else:
+        return None
 
 def type_from_labels(label):
     """
@@ -157,14 +164,6 @@ def is_topologies_equal(topology_a, topology_b, minimum_seqment_overlap=5):
                 return False
     return True
 
-
-
-
-# NOTE the following was taken directly from the DeepTMHMM codebase. 
-# I think it is a good idea to write your own code instead.
-# It is here as a reference for how the published DeepTMHMM accuracies
-# were calculate using true/predicted types and true/predicted topologies.
-
 def calculate_acc(correct, total):
     total = total.float()
     correct = correct.float()
@@ -172,7 +171,7 @@ def calculate_acc(correct, total):
         return torch.tensor(1)
     return correct / total
 
-def test_predictions(model, testloader, loss_function, cv, experiment_file_path):
+def test_predictions(model, loader, loss_function, cv, experiment_file_path, condition = "test", epoch = 0):
     # either loads an empty dict or the dict of the previous fold 
     experiment_json = json.loads(open(experiment_file_path, 'r').read())
 
@@ -185,7 +184,7 @@ def test_predictions(model, testloader, loss_function, cv, experiment_file_path)
         model.eval()
         test_batch_loss = []
         
-        for _, batch in enumerate(testloader):
+        for _, batch in enumerate(loader):
             inputs, labels, lengths = batch['data'], batch['labels'], batch['lengths']
             
             output = model(inputs)
@@ -244,7 +243,7 @@ def test_predictions(model, testloader, loss_function, cv, experiment_file_path)
                 protein_label_prediction.append(predicted_labels_for_protein)
                 
                 
-            # receive validation loss from current batch
+            # receive loss from current batch
             test_batch_loss.append(loss.item())
         
     model.train()
@@ -269,52 +268,61 @@ def test_predictions(model, testloader, loss_function, cv, experiment_file_path)
     glob_type_acc = float(calculate_acc(confusion_matrix[3][3] + confusion_matrix[3][5], confusion_matrix[3].sum()).detach())
     beta_type_acc = float(calculate_acc(confusion_matrix[4][4] + confusion_matrix[4][5], confusion_matrix[4].sum()).detach())
     
-    update_nested_dict(experiment_json, ['test', cv, 'confusion_matrix'], confusion_matrix.tolist())
+    # add data to dictionary
+    key_list = [condition, cv, epoch, 'confusion_matrix']
+    update_nested_dict(experiment_json, key_list, confusion_matrix.tolist())
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'type': type_accuracy
     })
     
     # Topology 
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'tm': {
             'type': tm_type_acc,
             'topology': tm_accuracy
         }
     })
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'sptm': {
             'type': tm_sp_type_acc,
             'topology': sptm_accuracy
         }
     })
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'sp': {
             'type': sp_type_acc,
             'topology': sp_accuracy
         }
     })
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'glob': {
             'type': glob_type_acc,
             'topology': glob_accuracy
         }
     })
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'beta': {
             'type': beta_type_acc,
             'topology': beta_accuracy
         }
     })
     
-    experiment_json['test'][cv].update({
+    experiment_json[condition][cv][epoch].update({
         'loss': np.mean(test_batch_loss)
     })
     
-    open(experiment_file_path, 'w').write(json.dumps(dict(experiment_json), indent = 1))
+    if condition == "test":
+        experiment_json[condition][cv].update({
+            "hyperparameter": model.hidden_size
+        })
     
-    return (protein_names, protein_label_actual, protein_label_prediction, np.mean(test_batch_loss)) 
+    open(experiment_file_path, 'w').write(json.dumps(experiment_json, indent = 4, default = custom_encoder))
+      
+    return np.mean(test_batch_loss)
+    
+    # return (protein_names, protein_label_actual, protein_label_prediction, np.mean(test_batch_loss), experiment_json[condition][cv][epoch]['loss']) 
