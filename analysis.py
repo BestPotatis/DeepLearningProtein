@@ -40,7 +40,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, index):
         sample = self.data[index]
-        inputs = sample['data']
+        inputs = torch.tensor(sample['data'])
         labels_str = sample['labels']
 
         labels_list = [self.label_encoding[label] for label in labels_str]
@@ -135,15 +135,15 @@ if __name__ == "__main__":
     # config
     k_folds = 5
     num_epochs = 100
-    batch_size = 32
+    batch_size = 2
     loss_function = nn.CrossEntropyLoss()
     lr = 1e-3
     tuning = [64, 128, 256, 512]
-    encoder_path = "encoder_proteins"
+    encoder_path = "encoder_proteins_test"
 
     experiment_file_list = []
     for i in tuning:
-        experiment_file_list.append(f"stat_data_{i}")
+        experiment_file_list.append(f"stat_data_{i}.json")
         experiment_json = {}
         open(experiment_file_list[-1], 'w').write(json.dumps(experiment_json))
 
@@ -179,10 +179,10 @@ if __name__ == "__main__":
         
         # define data loaders for train/val/test data in this fold (collate 0 pads for same-length)
         trainloader = DataLoader(
-                            training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, drop_last = True)
+                            training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, drop_last = False, generator = torch.Generator(device = device))
 
-        valloader = DataLoader(data_cvs[val_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = True)
-        testloader = DataLoader(data_cvs[test_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = True)
+        valloader = DataLoader(data_cvs[val_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = False)
+        testloader = DataLoader(data_cvs[test_id], batch_size=batch_size, shuffle=False, collate_fn=collate_fn, drop_last = False)
         
         param_models = []
         
