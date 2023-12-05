@@ -49,18 +49,18 @@ class CustomDataset(Dataset):
         return {'data': inputs, 'labels': labels_tensor}
 
 def collate_fn(batch):
-    # sort the batch by sequence length in descending order
+    # sort the batches by length
     batch = sorted(batch, key=lambda x: len(x['data']), reverse=True)
     
-    # pad sequences for data
+    # pad sequences
     data = [torch.tensor(sample['data']) for sample in batch]
     padded_data = pad_sequence(data, batch_first=True)
 
-    # Pad sequences for labels
+    # pad sequences for labels
     labels = [torch.tensor(sample['labels']) for sample in batch]
     padded_labels = pad_sequence(labels, batch_first=True)
     
-    # Pack the padded sequences for data
+    # pack the padded sequences for data
     lengths = [len(seq) for seq in data]
     #packed_data = pack_padded_sequence(padded_data, lengths=lengths, batch_first=True, enforce_sorted=True)
 
