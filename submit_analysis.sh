@@ -8,16 +8,16 @@
 #BSUB -J dl_protein_analysis
 
 ### -- ask for number of cores (default: 1) --
-#BSUB -n 1
+#BSUB -n 4
 
 ### -- specify that the cores must be on the same host --
 #BSUB -R "span[hosts=1]"
 
 ### -- specify that we need 4GB of memory per core/slot --
-#BSUB -R "rusage[mem=16GB]"
+#BSUB -R "rusage[mem=32GB]"
 
 ### -- specify that we want the job to get killed if it exceeds 5 GB per core/slot --
-#BSUB -M 17GB
+#BSUB -M 33GB
 
 ### -- Select the resources: 1 gpu in exclusive process mode --
 #BSUB -gpu "num=1:mode=exclusive_process"

@@ -171,7 +171,7 @@ def calculate_acc(correct, total):
         return torch.tensor(1)
     return correct / total
 
-def test_predictions(model, loader, loss_function, cv, experiment_file_path, condition = "test", epoch = 0):
+def test_predictions(model, loader, loss_function, cv, experiment_file_path, device, condition = "test", epoch = 0):
     # either loads an empty dict or the dict of the previous fold 
     experiment_json = json.loads(open(experiment_file_path, 'r').read())
 
@@ -185,7 +185,8 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, con
         test_batch_loss = []
         
         for _, batch in enumerate(loader):
-            inputs, labels, lengths = batch['data'], batch['labels'], batch['lengths']
+            inputs, labels, lengths = batch['data'], batch['labels'], torch.tensor(batch['lengths'])
+            inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)
             
             output = model(inputs)
             
@@ -201,16 +202,15 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, con
                 batch_labels = labels[l][:lengths[l]]
                 
                 # compute cross-entropy loss
-                loss += loss_function(batch_output, batch_labels)
+                loss += loss_function(batch_output, batch_labels) / loader.batch_size
                 
                 # predict labels and type for the masked outputs
                 predictions_batch_mask = batch_output.max(-1)[1]
-                ground_truth_batch_mask = batch_labels.max(-1)[1]
                 predict_prot_type_batch = type_from_labels(predictions_batch_mask)
-                ground_truth_prot_type_batch = type_from_labels(ground_truth_batch_mask)
+                ground_truth_prot_type_batch = type_from_labels(batch_labels)
                 
                 predict_label.append(predictions_batch_mask)
-                ground_truth_label.append(ground_truth_batch_mask)
+                ground_truth_label.append(batch_labels)
                 predict_prot_type.append(predict_prot_type_batch)
                 ground_truth_prot_type.append(ground_truth_prot_type_batch)
                 
