@@ -155,8 +155,15 @@ def is_topologies_equal(topology_a, topology_b, minimum_seqment_overlap=5):
             else:
                 return False
         if label_a in (3, 4, 5):
-            overlap_segment_start = max(topology_a[idx][0], topology_b[idx][0])
-            overlap_segment_end = min(topology_a[idx + 1][0], topology_b[idx + 1][0])
+            try:
+                overlap_segment_start = max(topology_a[idx][0], topology_b[idx][0])
+                overlap_segment_end = min(topology_a[idx + 1][0], topology_b[idx + 1][0])
+            except IndexError:
+                with open("error.txt", "a") as write_file:
+                    write_file.write(str(topology_a))
+                    write_file.write(str(topology_b))
+                    write_file.write(str(idx))
+                    
             if label_a == 5:
                 # Set minimum segment overlap to 3 for Beta regions
                 minimum_seqment_overlap = 3
