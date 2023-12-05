@@ -26,7 +26,6 @@ def update_nested_dict(d, keys, value):
 
 def custom_encoder(obj):
     if 'confusion_matrix' in obj:
-        # Use a different indentation for the confusion_matrix
         return json.dumps(obj, separators=(',', ':'), indent=4)
     else:
         return None
@@ -155,14 +154,11 @@ def is_topologies_equal(topology_a, topology_b, minimum_seqment_overlap=5):
             else:
                 return False
         if label_a in (3, 4, 5):
-            try:
+            if idx == (len(topology_a) - 1): # it's impossible to end in 3, 4 or 5
+                return False
+            else:
                 overlap_segment_start = max(topology_a[idx][0], topology_b[idx][0])
                 overlap_segment_end = min(topology_a[idx + 1][0], topology_b[idx + 1][0])
-            except IndexError:
-                with open("error.txt", "a") as write_file:
-                    write_file.write(str(topology_a))
-                    write_file.write(str(topology_b))
-                    write_file.write(str(idx))
                     
             if label_a == 5:
                 # Set minimum segment overlap to 3 for Beta regions
@@ -209,7 +205,7 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
                 batch_labels = labels[l][:lengths[l]]
                 
                 # compute cross-entropy loss
-                loss += loss_function(batch_output, batch_labels) / loader.batch_size
+                loss += loss_function(batch_output, batch_labels) * len(inputs)
                 
                 # predict labels and type for the masked outputs
                 predictions_batch_mask = batch_output.max(-1)[1]

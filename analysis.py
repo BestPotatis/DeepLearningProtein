@@ -90,8 +90,8 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
                 batch_labels = labels[l][:lengths[l]]
                 
                 # compute cross-entropy loss
-                loss += loss_function(batch_output, batch_labels) / trainloader.batch_size
-                
+                loss += loss_function(batch_output, batch_labels) / output.shape[0]
+            
             # gradient update
             optimizer.zero_grad()
             loss.backward()
@@ -135,15 +135,15 @@ if __name__ == "__main__":
     # config
     k_folds = 5
     num_epochs = 100
-    batch_size = 2
+    batch_size = 32
     loss_function = nn.CrossEntropyLoss()
     lr = 1e-3
     tuning = [64, 128, 256, 512]
-    encoder_path = "encoder_proteins_test"
+    encoder_path = "encoder_proteins"
 
     experiment_file_list = []
     for i in tuning:
-        experiment_file_list.append(f"stat_data_{i}.json")
+        experiment_file_list.append(f"stat_data_B5_{i}.json")
         experiment_json = {}
         open(experiment_file_list[-1], 'w').write(json.dumps(experiment_json))
 
