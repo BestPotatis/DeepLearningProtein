@@ -13,7 +13,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_se
 from collections import defaultdict
 from pytorchtools import EarlyStopping
 from classifier_rnn import RNN
-from accuracy import test_predictions
+from accuracy_b5 import test_predictions
 
 
 class CustomDataset(Dataset):
@@ -49,18 +49,18 @@ class CustomDataset(Dataset):
         return {'data': inputs, 'labels': labels_tensor}
 
 def collate_fn(batch):
-    # sort the batches by length
+    # sort the batch by sequence length in descending order
     batch = sorted(batch, key=lambda x: len(x['data']), reverse=True)
     
-    # pad sequences
+    # pad sequences for data
     data = [torch.tensor(sample['data']) for sample in batch]
     padded_data = pad_sequence(data, batch_first=True)
 
-    # pad sequences for labels
+    # Pad sequences for labels
     labels = [torch.tensor(sample['labels']) for sample in batch]
     padded_labels = pad_sequence(labels, batch_first=True)
     
-    # pack the padded sequences for data
+    # Pack the padded sequences for data
     lengths = [len(seq) for seq in data]
     #packed_data = pack_padded_sequence(padded_data, lengths=lengths, batch_first=True, enforce_sorted=True)
 
