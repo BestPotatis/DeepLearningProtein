@@ -1,11 +1,11 @@
 import json
 import matplotlib.pyplot as plt
-import pandas as pd
 import seaborn as sns
 import numpy as np
 from cycler import cycler
 
 def plot_fn(data, conf_int, early_stops, title, ylabel, labels):
+    plt.figure(figsize=(8, 4))
     for fold_data, conf_data, i in zip(data, conf_int, range(len(data))):
         label=labels[i]
         x = np.arange(len(fold_data))
@@ -18,14 +18,6 @@ def plot_fn(data, conf_int, early_stops, title, ylabel, labels):
     plt.legend()
     plt.show()
 
-def average_arrays(arrays):
-    average = arrays[0]
-    for i in range(1, len(arrays)):
-        for j in range(len(arrays[i])):
-            average[j] += arrays[i][j]
-    for i in range(len(average)):
-        average[i] = average[i] / len(arrays)
-    return average
 
 def plot_stat(data, stat, conditions):
     condition_loss = []
@@ -55,17 +47,8 @@ def plot_stat(data, stat, conditions):
              
     plot_fn(np.asarray(condition_loss), np.asarray(condition_conf), np.asarray(early_stops), stat, stat, conditions)
 
-def plot_substat(data, condition, stat, substat):
-    plot_data = []
-    for fold in data[condition]:
-        fold_data = []
-        for epoch in data[condition][fold]:
-            fold_data.append( data[condition][fold][epoch][stat.lower()][substat.lower()])
-        plot_data.append(fold_data)
-    
-    plot_fn(plot_data, condition, stat+substat)
 
-def plot_acc(data, condition, stats):
+def plot_acc(data, conditions, stats):
     condition_acc = []
     condition_conf = []
     early_stops = []
@@ -103,12 +86,11 @@ def plot_acc(data, condition, stats):
 
     for fold in data[condition]:
         early_stops.append(np.argmin([data["val"][fold][epochs]["loss"] for epochs in data["val"][fold].keys()]))
-        
-    # plot_fn(condition_acc, np.asarray(condition_conf), np.asarray(early_stops), stat, stat, conditions)
-
+     
     titles = ["type", "topology"]
     labels = ["train", "val"]
     colors = ["darkred", "darkorange", "darkgreen", "darkviolet", "darkblue"]
+    plt.figure(figsize=(12, 7))
     for i, train_val in enumerate(condition_acc):
         for j, types in enumerate(train_val):
             plt.subplot(1, 2, j + 1)
@@ -134,40 +116,37 @@ def plot_acc(data, condition, stats):
 
 
 def plot_confusion(data):
-    plot_data = None
+    plot_data = np.zeros((6,6))
     for split in data["test"]:
         confusion_matrix = data["test"][split]["0"]["confusion_matrix"]
-        plot_data = confusion_matrix
+        plot_data += confusion_matrix
+    
+    plot_data = plot_data[:-1] // len(data["test"].keys())
 
     row_labels = []
     column_labels = []
     for i in ["tm", "sptm", "sp", "glob", "beta", "Topology"]: 
-        row_labels.append(str(i))
+        row_labels.append(str(i) if i != "Topology" else None)
         column_labels.append(str(i))
 
-    fig, ax = plt.subplots(figsize=(11.5,8))
-    sns.heatmap(plot_data, ax=ax, annot=True, xticklabels=column_labels, yticklabels=row_labels)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(plot_data, ax=ax, annot=True, xticklabels=column_labels, yticklabels=row_labels, fmt='g')
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     plt.show()
 
 
-
-
 if __name__ == "__main__":
-    f = open("stat_data_512.json")
+    f = open("stat_data_B5_512.json")
     data = json.load(f)
 
     conditions = ["train", "val"]
     #Plot loss average across splits/folds
-    # plot_stat(data, "loss", conditions)
+    plot_stat(data, "loss", conditions)
 
     #Plot total and each accuracy avarged across splits/folds
-    # Train
-    plot_acc(data, "train", ["tm", "sptm", "sp", "glob", "beta"])
-    # Validation
-    #plot_acc(data, "val", ["tm", "sptm", "sp", "glob", "beta"])
+    plot_acc(data, conditions, ["tm", "sptm", "sp", "glob", "beta"])
 
     # Plot confusion matrix as table 
-    # plot_confusion(data)
+    plot_confusion(data)
     
