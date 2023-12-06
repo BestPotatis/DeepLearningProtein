@@ -205,7 +205,7 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
                 batch_labels = labels[l][:lengths[l]]
                 
                 # compute cross-entropy loss
-                loss += loss_function(batch_output, batch_labels) * len(inputs)
+                loss += loss_function(batch_output, batch_labels) / output.shape[0]
                 
                 # predict labels and type for the masked outputs
                 predictions_batch_mask = batch_output.max(-1)[1]
