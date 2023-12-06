@@ -241,6 +241,7 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
                         confusion_matrix[actual_type][predicted_type] += 1
 
                 else:
+                    # beware: if predicted type = None, it will add +1 to the entire row
                     confusion_matrix[actual_type][predicted_type] += 1
                 
                 protein_label_prediction.append(predicted_labels_for_protein)

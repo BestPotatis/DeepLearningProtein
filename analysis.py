@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     experiment_file_list = []
     for i in tuning:
-        experiment_file_list.append(f"stat_data_B5_{i}.json")
+        experiment_file_list.append(f"stat_data_{i}.json")
         experiment_json = {}
         open(experiment_file_list[-1], 'w').write(json.dumps(experiment_json))
 
