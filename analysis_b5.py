@@ -117,10 +117,10 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
             
             return train_loss[-16], -early_stopping.best_score
         
-        # if epoch % 1 == 0:
-        #     print("training loss: ", train_loss[-1], \
-        #         "\t validation loss: ", valid_loss[-1],
-        #         "\t early stop score:", -early_stopping.best_score)
+        if epoch % 1 == 0:
+            print("training loss: ", train_loss[-1], \
+                "\t validation loss: ", valid_loss[-1],
+                "\t early stop score:", -early_stopping.best_score)
     
     return train_loss[-1], valid_loss[-1]
 
@@ -135,11 +135,11 @@ if __name__ == "__main__":
     # config
     k_folds = 5
     num_epochs = 100
-    batch_size = 32
+    batch_size = 2
     loss_function = nn.CrossEntropyLoss()
     lr = 1e-3
     tuning = [64, 128, 256, 512]
-    encoder_path = "encoder_proteins"
+    encoder_path = "encoder_proteins_test"
 
     experiment_file_list = []
     for i in tuning:
@@ -171,8 +171,8 @@ if __name__ == "__main__":
 
     # k-fold cross validation
     for fold, (train_ids, val_id, test_id) in enumerate(kfolds):    
-        # print(f'\nFOLD {fold + 1}')
-        # print('--------------------------------')
+        print(f'\nFOLD {fold + 1}')
+        print('--------------------------------')
         
         # concatenates the data from the different cv's
         training_data = np.concatenate(data_cvs[train_ids], axis = 0)
@@ -193,8 +193,8 @@ if __name__ == "__main__":
         for idx, param in enumerate(tuning):
             experiment_file_path = experiment_file_list[idx] 
             
-            # print(f'\nHIDDEN_SIZE {param}')
-            # print('--------------------------------')
+            print(f'\nHIDDEN_SIZE {param}')
+            print('--------------------------------')
             
             # define models to be analyzed
             model_rnn = RNN(512, param, 6)
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         best_model = param_models[best_param_idx]
         experiment_file_path = experiment_file_list[best_param_idx]
         
-        # print(f"\nbest params for fold {fold + 1}: ", tuning[best_param_idx])  
+        print(f"\nbest params for fold {fold + 1}: ", tuning[best_param_idx])  
         
         test_loss = test_predictions(model = best_model,
                         loader = testloader,
@@ -227,4 +227,4 @@ if __name__ == "__main__":
                         cv = str(fold), experiment_file_path = experiment_file_path,
                         device = device)
 
-        # print(f"test loss for fold {fold + 1}: ", test_loss)
+        print(f"test loss for fold {fold + 1}: ", test_loss)
