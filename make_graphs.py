@@ -116,16 +116,19 @@ def plot_acc(data, conditions, stats):
 
 
 def plot_confusion(data):
-    plot_data = np.zeros((6,6))
-    for split in data["test"]:
-        confusion_matrix = data["test"][split]["0"]["confusion_matrix"]
+    plot_data = np.zeros((5,7))
+    for split in data["train"]:
+        confusion_matrix = data["train"][split]["0"]["confusion_matrix"]
         plot_data += confusion_matrix
     
-    plot_data = plot_data[:-1] // len(data["test"].keys())
+    plot_data = plot_data // len(data["train"].keys()) #CHANGE ALL TRAIN BACK TO TEST
+    
+    # normalize row-wise
+    plot_data = plot_data / (np.linalg.norm(plot_data, axis = 1, keepdims = True) + 1e-9)
 
     row_labels = []
     column_labels = []
-    for i in ["tm", "sptm", "sp", "glob", "beta", "Topology"]: 
+    for i in ["tm", "sptm", "sp", "glob", "beta", "topology"]: 
         row_labels.append(str(i) if i != "Topology" else None)
         column_labels.append(str(i))
 
@@ -137,15 +140,15 @@ def plot_confusion(data):
 
 
 if __name__ == "__main__":
-    f = open("stat_data_B5_512.json")
+    f = open("stat_data_B5_256.json")
     data = json.load(f)
 
     conditions = ["train", "val"]
     #Plot loss average across splits/folds
-    plot_stat(data, "loss", conditions)
+    #plot_stat(data, "loss", conditions)
 
     #Plot total and each accuracy avarged across splits/folds
-    plot_acc(data, conditions, ["tm", "sptm", "sp", "glob", "beta"])
+    #plot_acc(data, conditions, ["tm", "sptm", "sp", "glob", "beta"])
 
     # Plot confusion matrix as table 
     plot_confusion(data)

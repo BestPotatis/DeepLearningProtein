@@ -178,8 +178,7 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
     # either loads an empty dict or the dict of the previous fold 
     experiment_json = json.loads(open(experiment_file_path, 'r').read())
 
-    confusion_matrix = torch.zeros((6, 6), dtype=torch.int64)
-    protein_names = []
+    confusion_matrix = torch.zeros((5, 7), dtype=torch.int64)
     protein_label_actual = []
     protein_label_prediction = []
     
@@ -188,15 +187,14 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
         test_batch_loss = []
         
         for _, batch in enumerate(loader):
-            inputs, labels, lengths = batch['data'], batch['labels'], torch.tensor(batch['lengths'])
-            inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)
+            inputs, labels, lengths, types = batch['data'], batch['labels'], batch['lengths'], batch["type"]
+            inputs, labels, lengths, types = inputs.to(device), labels.to(device), lengths.to(device), types.to(device)
             
             output = model(inputs)
             
             predict_label = []
             predict_prot_type = []
             ground_truth_label = []
-            ground_truth_prot_type = [] 
             
             loss = 0
             for l in range(output.shape[0]):
@@ -210,19 +208,16 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
                 # predict labels and type for the masked outputs
                 predictions_batch_mask = batch_output.max(-1)[1]
                 predict_prot_type_batch = type_from_labels(predictions_batch_mask)
-                ground_truth_prot_type_batch = type_from_labels(batch_labels)
                 
                 predict_label.append(predictions_batch_mask)
                 ground_truth_label.append(batch_labels)
                 predict_prot_type.append(predict_prot_type_batch)
-                ground_truth_prot_type.append(ground_truth_prot_type_batch)
                 
                 # used later for the accuracy computation
-                protein_names.extend(ground_truth_prot_type)
                 protein_label_actual.extend(ground_truth_label)
             
             # go over each protein and compute accuracy
-            for idx, actual_type in enumerate(ground_truth_prot_type):
+            for idx, actual_type in enumerate(types):
                 predicted_type = predict_prot_type[idx]
                 predicted_topology = label_list_to_topology(predict_label[idx])
                 predicted_labels_for_protein = predict_label[idx]
@@ -239,9 +234,10 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
                         confusion_matrix[actual_type][5] += 1
                     else:
                         confusion_matrix[actual_type][predicted_type] += 1
-
+                elif predicted_type == None:
+                    # add to invalid column
+                    confusion_matrix[actual_type][6] += 1
                 else:
-                    # beware: if predicted type = None, it will add +1 to the entire row
                     confusion_matrix[actual_type][predicted_type] += 1
                 
                 protein_label_prediction.append(predicted_labels_for_protein)
@@ -266,6 +262,8 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
     glob_accuracy = float(calculate_acc(confusion_matrix[3][5], confusion_matrix[3].sum()).detach())
     beta_accuracy = float(calculate_acc(confusion_matrix[4][5], confusion_matrix[4].sum()).detach())
     
+    topology_accuracy = sum([tm_accuracy, sptm_accuracy, sp_accuracy, glob_accuracy, beta_accuracy]) / 5
+    
     tm_type_acc = float(calculate_acc(confusion_matrix[0][0] + confusion_matrix[0][5], confusion_matrix[0].sum()).detach())
     tm_sp_type_acc = float(calculate_acc(confusion_matrix[1][1] + confusion_matrix[1][5], confusion_matrix[1].sum()).detach())
     sp_type_acc = float(calculate_acc(confusion_matrix[2][2] + confusion_matrix[2][5], confusion_matrix[2].sum()).detach())
@@ -278,6 +276,10 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
     
     experiment_json[condition][cv][epoch].update({
         'type': type_accuracy
+    })
+    
+    experiment_json[condition][cv][epoch].update({
+        'topology': topology_accuracy
     })
     
     # Topology 
@@ -327,6 +329,4 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
     
     open(experiment_file_path, 'w').write(json.dumps(experiment_json, indent = 4, default = custom_encoder))
       
-    return np.mean(test_batch_loss)
-    
-    # return (protein_names, protein_label_actual, protein_label_prediction, np.mean(test_batch_loss), experiment_json[condition][cv][epoch]['loss']) 
+    return np.mean(test_batch_loss), topology_accuracy

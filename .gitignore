@@ -12,3 +12,4 @@ stat_data_*
 .DS_Store
 error.txt
 gpu_analysis_19692410.err
+best_model_*.pt
