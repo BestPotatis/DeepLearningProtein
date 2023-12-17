@@ -117,11 +117,11 @@ def plot_acc(data, conditions, stats):
 
 def plot_confusion(data):
     plot_data = np.zeros((5,7))
-    for split in data["train"]:
-        confusion_matrix = data["train"][split]["0"]["confusion_matrix"]
+    for split in data["test"]:
+        confusion_matrix = data["test"][split]["0"]["confusion_matrix"]
         plot_data += confusion_matrix
     
-    plot_data = plot_data // len(data["train"].keys()) #CHANGE ALL TRAIN BACK TO TEST
+    plot_data = plot_data // len(data["test"].keys()) #CHANGE ALL TRAIN BACK TO TEST
     
     # normalize row-wise
     plot_data = plot_data / (np.linalg.norm(plot_data, axis = 1, keepdims = True) + 1e-9)
