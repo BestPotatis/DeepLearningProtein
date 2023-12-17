@@ -55,11 +55,11 @@ def collate_fn(batch):
     
     # pad sequences for data
     data = [torch.tensor(sample['data']) for sample in batch]
-    padded_data = pad_sequence(data, batch_first=True)
+    padded_data = pad_sequence(data, batch_first=True, padding_value=-1)
 
     # pad sequences for labels
     labels = [torch.tensor(sample['labels']) for sample in batch]
-    padded_labels = pad_sequence(labels, batch_first=True)
+    padded_labels = pad_sequence(labels, batch_first=True, padding_value=-1)
     
     # pack the padded sequences for data
     lengths = torch.tensor([len(seq) for seq in data])
@@ -87,7 +87,9 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
             # receive output from rnn
             output = model(inputs)  
             
-            loss = 0
+            # loss = loss_function(output.permute(0, 2, 1), labels)
+            
+            loss = 0    
             for l in range(output.shape[0]):
                 # masking the zero-padded outputs
                 batch_output = output[l][:lengths[l]]
@@ -118,14 +120,14 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
         early_stopping(valid_top_acc, model)
         
         if early_stopping.early_stop:
-            print("Early stopping, best loss: ", train_loss[-16], -early_stopping.best_score)
+            # print("Early stopping, best loss: ", train_loss[-16], -early_stopping.best_score)
             
             return train_loss[-16], -early_stopping.best_score
         
-        if epoch % 1 == 0:
-            print("training loss: ", train_loss[-1], \
-                "\t validation loss: ", valid_loss[-1],
-                "\t early stop score:", -early_stopping.best_score)
+        # if epoch % 1 == 0:
+        #     print("training loss: ", train_loss[-1], \
+        #         "\t validation loss: ", valid_loss[-1],
+        #         "\t early stop score:", -early_stopping.best_score)
     
     return train_loss[-1], top_acc[-1]
 
@@ -140,11 +142,11 @@ if __name__ == "__main__":
     # config
     k_folds = 5
     num_epochs = 100
-    batch_size = 10
-    loss_function = nn.CrossEntropyLoss()
+    batch_size = 32
+    loss_function = nn.CrossEntropyLoss(ignore_index = -1)
     lr = 1e-3
     tuning = [64, 128, 256, 512]
-    encoder_path = "encoder_proteins_test"
+    encoder_path = "encoder_proteins"
 
     experiment_file_list = []
     for i in tuning:
@@ -171,8 +173,8 @@ if __name__ == "__main__":
 
     # k-fold cross validation
     for fold, (train_ids, val_id, test_id) in enumerate(kfolds):    
-        print(f'\nFOLD {fold + 1}')
-        print('--------------------------------')
+        # print(f'\nFOLD {fold + 1}')
+        # print('--------------------------------')
         
         # concatenates the data from the different cv's
         training_data = np.concatenate(data_cvs[train_ids], axis = 0)
@@ -202,8 +204,8 @@ if __name__ == "__main__":
         for idx, param in enumerate(tuning):
             experiment_file_path = experiment_file_list[idx] 
             
-            print(f'\nHIDDEN_SIZE {param}')
-            print('--------------------------------')
+            # print(f'\nHIDDEN_SIZE {param}')
+            # print('--------------------------------')
             
             # define models to be analyzed
             model_rnn = RNN(512, param, 6)
@@ -230,7 +232,7 @@ if __name__ == "__main__":
         
         experiment_file_path = experiment_file_list[best_param_idx]
         
-        print(f"\nbest params for fold {fold + 1}: ", tuning[best_param_idx])  
+        # print(f"\nbest params for fold {fold + 1}: ", tuning[best_param_idx])  
         
         test_loss, test_top_acc = test_predictions(model = best_model,
                         loader = testloader,
@@ -238,5 +240,5 @@ if __name__ == "__main__":
                         cv = str(fold), experiment_file_path = experiment_file_path,
                         device = device)
 
-        print(f"test loss for fold {fold + 1}: ", test_loss, \
-            f"\ntest topology accuracy for fold {fold + 1}: ", test_top_acc)
+        # print(f"test loss for fold {fold + 1}: ", test_loss, \
+        #     f"\ntest topology accuracy for fold {fold + 1}: ", test_top_acc)

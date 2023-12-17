@@ -196,6 +196,8 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
             predict_prot_type = []
             ground_truth_label = []
             
+            # invalid_indices = np.stack(torch.where(labels == -1), axis = 1)
+            
             loss = 0
             for l in range(output.shape[0]):
                 # masking the zero-padded outputs
