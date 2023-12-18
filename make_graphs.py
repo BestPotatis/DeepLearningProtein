@@ -42,8 +42,8 @@ def plot_stat(data, stat, conditions):
         condition_loss.append(avg_epoch_loss)   
         condition_conf.append(conf_epoch) 
 
-    for fold in data[condition]:
-        early_stops.append(np.argmin([data["val"][fold][epochs][stat.lower()] for epochs in data["val"][fold].keys()]))
+    for fold in data["val"]:
+        early_stops.append(np.argmax([data["val"][fold][epochs]["topology"] for epochs in data["val"][fold].keys()]))
              
     plot_fn(np.asarray(condition_loss), np.asarray(condition_conf), np.asarray(early_stops), stat, stat, conditions)
 
@@ -85,7 +85,7 @@ def plot_acc(data, conditions, stats):
         condition_conf.append(conf_epoch_acc) 
 
     for fold in data[condition]:
-        early_stops.append(np.argmin([data["val"][fold][epochs]["loss"] for epochs in data["val"][fold].keys()]))
+        early_stops.append(np.argmax([data["val"][fold][epochs]["topology"] for epochs in data["val"][fold].keys()]))
      
     titles = ["type", "topology"]
     labels = ["train", "val"]
@@ -121,15 +121,15 @@ def plot_confusion(data):
         confusion_matrix = data["test"][split]["0"]["confusion_matrix"]
         plot_data += confusion_matrix
     
-    plot_data = plot_data // len(data["test"].keys()) #CHANGE ALL TRAIN BACK TO TEST
+    plot_data = plot_data // len(data["test"].keys())
     
     # normalize row-wise
-    plot_data = plot_data / (np.linalg.norm(plot_data, axis = 1, keepdims = True) + 1e-9)
+    plot_data = plot_data / (np.sum(plot_data, axis = 1, keepdims = True) + 1e-9)
 
     row_labels = []
     column_labels = []
-    for i in ["tm", "sptm", "sp", "glob", "beta", "topology"]: 
-        row_labels.append(str(i) if i != "Topology" else None)
+    for i in ["tm", "sptm", "sp", "glob", "beta", "topology", "invalid"]: 
+        row_labels.append(str(i) if i != "topology" and i != "invalid" else None)
         column_labels.append(str(i))
 
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -145,10 +145,10 @@ if __name__ == "__main__":
 
     conditions = ["train", "val"]
     #Plot loss average across splits/folds
-    #plot_stat(data, "loss", conditions)
+    plot_stat(data, "loss", conditions)
 
     #Plot total and each accuracy avarged across splits/folds
-    #plot_acc(data, conditions, ["tm", "sptm", "sp", "glob", "beta"])
+    plot_acc(data, conditions, ["tm", "sptm", "sp", "glob", "beta"])
 
     # Plot confusion matrix as table 
     plot_confusion(data)
