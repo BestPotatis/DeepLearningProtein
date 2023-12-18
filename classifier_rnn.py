@@ -9,10 +9,10 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         # rnn
         self.lstm = nn.LSTM(input_size = input_size, hidden_size = hidden_size, 
-                            batch_first = True)
+                            batch_first = True, bidirectional = True)
 
         # define fully connected layers
-        self.linear = nn.Linear(hidden_size, num_classes, bias = False)
+        self.linear = nn.Linear(hidden_size*2, num_classes, bias = False)
 
     def forward(self, x):
         # return output and last hidden state
