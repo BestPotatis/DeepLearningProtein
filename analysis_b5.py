@@ -183,7 +183,7 @@ if __name__ == "__main__":
         y_train = torch.tensor([prot_type["type"] for prot_type in training_data])
         
         weight = torch.zeros(5)
-        for t in np.unique(y_train):
+        for t in torch.unique(y_train):
             class_sample_count = torch.tensor([len(torch.where(y_train == t)[0])])
             weight[t] = 1. / class_sample_count
         
