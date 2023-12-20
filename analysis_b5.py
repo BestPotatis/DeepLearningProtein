@@ -74,7 +74,7 @@ def train_nn(model, trainloader, valloader, loss_function, optimizer, fold, expe
 
     model.train()
     
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path = f"best_model_{model.hidden_size}.pt")
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path = f"best_model_{model.hidden_size}_{model.num_layers}.pt")
     train_loss = []
     valid_loss = []
     top_acc = []
@@ -145,12 +145,13 @@ if __name__ == "__main__":
     batch_size = 32
     loss_function = nn.CrossEntropyLoss(ignore_index = -1)
     lr = 1e-3
-    tuning = [64, 128, 256, 512]
+    tuning = [256, 256, 512, 512]
+    layers = [1, 2, 1, 2]
     encoder_path = "encoder_proteins"
 
     experiment_file_list = []
-    for i in tuning:
-        experiment_file_list.append(f"stat_data_B5_{i}.json")
+    for i, j in zip(tuning, layers):
+        experiment_file_list.append(f"stat_data_hs_{i}_l_{j}.json")
         experiment_json = {}
         open(experiment_file_list[-1], 'w').write(json.dumps(experiment_json))
 
@@ -201,14 +202,14 @@ if __name__ == "__main__":
         val_acc_param = np.zeros((len(tuning)))
         
         # hyperparameter tune
-        for idx, param in enumerate(tuning):
+        for idx, (param, layer) in enumerate(zip(tuning, layers)):
             experiment_file_path = experiment_file_list[idx] 
             
             # print(f'\nHIDDEN_SIZE {param}')
             # print('--------------------------------')
             
             # define models to be analyzed
-            model_rnn = RNN(512, param, 6)
+            model_rnn = RNN(512, param, 6, num_layer = layer)
             model_rnn.to(device)
             
             optimizer = optim.Adam(model_rnn.parameters(), lr = lr)
@@ -226,8 +227,8 @@ if __name__ == "__main__":
         # test for the best model
         best_param_idx = val_acc_param.argmax()
         
-        best_model = RNN(512, tuning[best_param_idx], 6)
-        best_model.load_state_dict(torch.load(f"best_model_{tuning[best_param_idx]}.pt"))
+        best_model = RNN(512, tuning[best_param_idx], 6, layers[best_param_idx])
+        best_model.load_state_dict(torch.load(f"best_model_{tuning[best_param_idx]}_{layers[best_param_idx]}.pt"))
         best_model.eval()
         
         experiment_file_path = experiment_file_list[best_param_idx]

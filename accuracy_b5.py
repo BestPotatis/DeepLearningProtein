@@ -326,7 +326,7 @@ def test_predictions(model, loader, loss_function, cv, experiment_file_path, dev
     
     if condition == "test":
         experiment_json[condition][cv].update({
-            "hyperparameter": model.hidden_size
+            "hyperparameter": (model.hidden_size, model.num_layers)
         })
     
     open(experiment_file_path, 'w').write(json.dumps(experiment_json, indent = 4, default = custom_encoder))
