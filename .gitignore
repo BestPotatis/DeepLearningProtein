@@ -2,7 +2,6 @@
 /proteins/
 /.vscode/
 /encoder_proteins/
-/encoder_proteins_test/
 /.ipynb_checkpoints/
 data.zip
 linear_classifier.py
@@ -12,3 +11,4 @@ stat_data_*
 .DS_Store
 error.txt
 gpu_analysis_19692410.err
+best_model_*.pt
