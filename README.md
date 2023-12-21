@@ -15,4 +15,4 @@ As the data set is too large to be uploaded to github a small sample can be foun
 - DeepTMHMM.partitions.json - Is the data gathered from the DeepTMHMM project
 - data_collect_felix_ver.py - The code uses the AlphaFold API to download the pdb files utilizing the DeepTMHMM data to get the same protein data. Given to us by our supervisor Felix Teufel
 - create_latent_dataset.ipynb - After the data_collect_felix_ver.py has been run the proteins pdb files can be used to create the latent representations using this file. If you wish to use the entire dataset for the analysis, run this file after data_collect_felix_ver.py.
-- encoder_proteins_test - Is a small sample of the encoded data which has been used for training
+- encoder_proteins_test - Is a small sample of the encoded data which has been used for training 
