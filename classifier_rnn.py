@@ -26,5 +26,6 @@ class RNN(nn.Module):
         return x
 
 if __name__ == "__main__":
-    m = RNN(1, 5, 3)
-    print(m(torch.Tensor([[1]])))
+    m = RNN(1, 7, 3, num_layer=1)
+    data = torch.Tensor([[1]] * 40)
+    print(m(data))
